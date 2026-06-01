@@ -17,6 +17,8 @@ export const LAST_SYNCED_CONFIG_STORAGE_KEY = "lastSyncedConfig"
 export const GOOGLE_DRIVE_TOKEN_STORAGE_KEY = "__googleDriveToken"
 
 export const THEME_STORAGE_KEY = "theme"
+export const POPOVER_FIXED_POSITION_STORAGE_KEY = "popoverFixedPosition"
+export const SELECTION_POPOVER_PINNED_STORAGE_KEY = "selectionPopoverPinned"
 export const DEFAULT_DETECTED_CODE = "eng" as const
 export const CONFIG_SCHEMA_VERSION = 73
 

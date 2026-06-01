@@ -12,6 +12,7 @@ import { ANALYTICS_FEATURE, ANALYTICS_SURFACE } from "@/types/analytics"
 import { isLLMProviderConfig, isTranslateProviderConfig } from "@/types/config/provider"
 import { createFeatureUsageContext, trackFeatureUsed } from "@/utils/analytics"
 import { configFieldsAtomMap, writeConfigAtom } from "@/utils/atoms/config"
+import { popoverFixedPositionAtom } from "@/utils/atoms/popover-position"
 import { filterEnabledProvidersConfig } from "@/utils/config/helpers"
 import { buildFeatureProviderPatch } from "@/utils/constants/feature-providers"
 import { streamBackgroundText } from "@/utils/content-script/background-stream-client"
@@ -194,6 +195,8 @@ export function SelectionTranslationProvider({
   const selectionSessionRef = useRef(selectionSession)
   selectionSessionRef.current = selectionSession
   const pinned = useAtomValue(selectionPopoverPinnedAtom)
+  const fixedPosition = useAtomValue(popoverFixedPositionAtom)
+  const setFixedPosition = useSetAtom(popoverFixedPositionAtom)
   const translateRequest = useAtomValue(selectionToolbarTranslateRequestAtom)
   const providersConfig = useAtomValue(configFieldsAtomMap.providersConfig)
   const setIsSelectionToolbarVisible = useSetAtom(isSelectionToolbarVisibleAtom)
@@ -517,13 +520,20 @@ export function SelectionTranslationProvider({
       return
     }
 
+    const effectiveAnchor = pinned && fixedPosition
+      ? {
+          x: Math.round(fixedPosition.xRatio * window.innerWidth),
+          y: Math.round(fixedPosition.yRatio * window.innerHeight),
+        }
+      : anchor
+
     commitOpenRequest({
       session: currentSession,
-      anchor,
+      anchor: effectiveAnchor,
       surface: ANALYTICS_SURFACE.SELECTION_TOOLBAR,
     })
     handleOpenChange(true)
-  }, [commitOpenRequest, handleOpenChange, isOpen, pinned, setIsSelectionToolbarVisible])
+  }, [commitOpenRequest, handleOpenChange, isOpen, pinned, fixedPosition, setIsSelectionToolbarVisible])
 
   const reTriggerTranslation = useCallback(() => {
     const currentSession = selectionSessionRef.current
@@ -535,6 +545,19 @@ export function SelectionTranslationProvider({
     setTranslationNonce(prev => prev + 1)
     setIsSelectionToolbarVisible(false)
   }, [setIsSelectionToolbarVisible])
+
+  const handlePinChange = useCallback((nextPinned: boolean) => {
+    if (!nextPinned) {
+      void setFixedPosition(null)
+    }
+    else if (anchor) {
+      void setFixedPosition({
+        xRatio: anchor.x / window.innerWidth,
+        yRatio: anchor.y / window.innerHeight,
+        widthRatio: 0.35,
+      })
+    }
+  }, [setFixedPosition, anchor])
 
   const contextValue = useMemo<SelectionTranslationContextValue>(() => ({
     prepareToolbarOpen,
@@ -550,6 +573,7 @@ export function SelectionTranslationProvider({
         anchor={anchor}
         onAnchorChange={setAnchor}
         pinnedAtom={selectionPopoverPinnedAtom}
+        onFixedPositionChange={setFixedPosition}
       >
         {children}
         <SelectionPopover.Content
@@ -563,7 +587,7 @@ export function SelectionTranslationProvider({
             />
             <div className="flex items-center gap-1">
               <TargetLanguageSelector />
-              <SelectionPopover.Pin />
+              <SelectionPopover.Pin onPinChange={handlePinChange} />
               <SelectionPopover.Close />
             </div>
           </SelectionPopover.Header>

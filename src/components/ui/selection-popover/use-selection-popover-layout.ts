@@ -1,4 +1,5 @@
 import type { Rnd } from "react-rnd"
+import type { PopoverFixedPosition } from "@/types/popover-position"
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react"
 import { flushSync } from "react-dom"
 
@@ -26,6 +27,7 @@ interface UseSelectionPopoverLayoutOptions {
   anchor: Position | null
   isVisible: boolean
   isPinned?: boolean
+  onFixedPositionChange?: (pos: PopoverFixedPosition | null) => void
 }
 
 interface UseSelectionPopoverLayoutResult {
@@ -191,6 +193,7 @@ export function useSelectionPopoverLayout({
   anchor,
   isVisible,
   isPinned = false,
+  onFixedPositionChange,
 }: UseSelectionPopoverLayoutOptions): UseSelectionPopoverLayoutResult {
   const rndRef = useRef<Rnd | null>(null)
   const resizeFrameRef = useRef<number | null>(null)
@@ -447,8 +450,17 @@ export function useSelectionPopoverLayout({
       popoverRect?.rect.height ?? 0,
     )
     setPosition(nextPosition)
+
+    if (isPinned && popoverRect && onFixedPositionChange) {
+      onFixedPositionChange({
+        xRatio: nextPosition.x / window.innerWidth,
+        yRatio: nextPosition.y / window.innerHeight,
+        widthRatio: popoverRect.rect.width / window.innerWidth,
+      })
+    }
+
     scheduleViewportLayout()
-  }, [scheduleViewportLayout])
+  }, [scheduleViewportLayout, isPinned, onFixedPositionChange])
 
   const handleResizeStop = useCallback((element: HTMLElement, position: Position) => {
     const manualSize = {
@@ -471,8 +483,17 @@ export function useSelectionPopoverLayout({
 
     setPosition(nextPosition)
     rndRef.current?.updateSize(manualSize)
+
+    if (isPinned && onFixedPositionChange) {
+      onFixedPositionChange({
+        xRatio: nextPosition.x / window.innerWidth,
+        yRatio: nextPosition.y / window.innerHeight,
+        widthRatio: manualSize.width / window.innerWidth,
+      })
+    }
+
     scheduleViewportLayout()
-  }, [scheduleViewportLayout])
+  }, [scheduleViewportLayout, isPinned, onFixedPositionChange])
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
     event.stopPropagation()

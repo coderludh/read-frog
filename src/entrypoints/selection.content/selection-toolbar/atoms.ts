@@ -6,9 +6,13 @@ import { dequal } from "dequal"
 import { atom } from "jotai"
 import { atomFamily } from "jotai-family"
 import { selectAtom } from "jotai/utils"
+import z from "zod"
 import { configAtom } from "@/utils/atoms/config"
+import { storageAdapter } from "@/utils/atoms/storage-adapter"
 import { getProviderConfigById } from "@/utils/config/helpers"
+import { SELECTION_POPOVER_PINNED_STORAGE_KEY } from "@/utils/constants/config"
 import { resolveProviderConfigOrNull } from "@/utils/constants/feature-providers"
+import { logger } from "@/utils/logger"
 import { buildContextSnapshot } from "../utils"
 
 export interface SelectionSession {
@@ -65,7 +69,54 @@ export const contextAtom = atom(
 )
 export const isSelectionToolbarVisibleAtom = atom<boolean>(false)
 
-export const selectionPopoverPinnedAtom = atom<boolean>(false)
+const baseSelectionPopoverPinnedAtom = atom<boolean>(false)
+
+export const selectionPopoverPinnedAtom = atom(
+  get => get(baseSelectionPopoverPinnedAtom),
+  async (get, set, newValue: boolean) => {
+    const prev = get(baseSelectionPopoverPinnedAtom)
+    set(baseSelectionPopoverPinnedAtom, newValue)
+    try {
+      await storageAdapter.set(SELECTION_POPOVER_PINNED_STORAGE_KEY, newValue, z.boolean())
+    }
+    catch (error) {
+      console.error("Failed to set selectionPopoverPinned to storage:", newValue, error)
+      set(baseSelectionPopoverPinnedAtom, prev)
+    }
+  },
+)
+
+baseSelectionPopoverPinnedAtom.onMount = (setAtom: (newValue: boolean) => void) => {
+  void storageAdapter.get<boolean>(
+    SELECTION_POPOVER_PINNED_STORAGE_KEY,
+    false,
+    z.boolean(),
+  ).then(setAtom).catch((error) => {
+    logger.error("baseSelectionPopoverPinnedAtom initial storage load failed", error)
+  })
+  const unwatch = storageAdapter.watch<boolean>(
+    SELECTION_POPOVER_PINNED_STORAGE_KEY,
+    setAtom,
+  )
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      void storageAdapter.get<boolean>(
+        SELECTION_POPOVER_PINNED_STORAGE_KEY,
+        false,
+        z.boolean(),
+      ).then(setAtom).catch((error) => {
+        logger.error("baseSelectionPopoverPinnedAtom visibility change storage reload failed", error)
+      })
+    }
+  }
+  document.addEventListener("visibilitychange", handleVisibilityChange)
+
+  return () => {
+    unwatch()
+    document.removeEventListener("visibilitychange", handleVisibilityChange)
+  }
+}
 
 export const selectionContentAtom = atom(get => get(selectionAtom)?.text ?? null)
 

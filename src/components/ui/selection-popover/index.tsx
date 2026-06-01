@@ -1,6 +1,7 @@
 "use client"
 
 import type { Atom } from "jotai"
+import type { PopoverFixedPosition } from "@/types/popover-position"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
@@ -38,6 +39,7 @@ interface SelectionPopoverRootContextValue {
   setAnchor: (value: SelectionPopoverPosition | null) => void
   pinned: boolean
   setPinned: React.Dispatch<React.SetStateAction<boolean>>
+  onFixedPositionChange?: (pos: PopoverFixedPosition | null) => void
   triggerElement: HTMLElement | null
   setTriggerElement: React.Dispatch<React.SetStateAction<HTMLElement | null>>
 }
@@ -86,6 +88,7 @@ function SelectionPopoverRoot({
   defaultOpen = false,
   open: openProp,
   onAnchorChange,
+  onFixedPositionChange,
   onOpenChange,
   pinnedAtom: pinnedAtomProp,
 }: {
@@ -94,6 +97,7 @@ function SelectionPopoverRoot({
   defaultOpen?: boolean
   open?: boolean
   onAnchorChange?: (anchor: SelectionPopoverPosition | null) => void
+  onFixedPositionChange?: (pos: PopoverFixedPosition | null) => void
   onOpenChange?: (open: boolean) => void
   pinnedAtom?: Atom<boolean>
 }) {
@@ -154,9 +158,10 @@ function SelectionPopoverRoot({
     setAnchor,
     pinned,
     setPinned,
+    onFixedPositionChange,
     triggerElement,
     setTriggerElement,
-  }), [anchor, open, pinned, setPinned, setAnchor, setOpen, triggerElement])
+  }), [anchor, onFixedPositionChange, open, pinned, setPinned, setAnchor, setOpen, triggerElement])
 
   return (
     <SelectionPopoverRootContext value={contextValue}>
@@ -201,7 +206,9 @@ function SelectionPopoverTrigger({
     }
 
     const rect = event.currentTarget.getBoundingClientRect()
-    setPinned(false)
+    if (!pinned) {
+      setPinned(false)
+    }
     setTriggerElement(event.currentTarget)
     setAnchor({ x: rect.left, y: rect.top })
     if (open) {
@@ -332,7 +339,7 @@ function SelectionPopoverContent({
   container?: SelectionPopoverPortalContainer
   finalFocus?: DialogPrimitive.Popup.Props["finalFocus"]
 }) {
-  const { open, setOpen, anchor, pinned, triggerElement } = useSelectionPopoverRootContext()
+  const { open, setOpen, anchor, pinned, onFixedPositionChange, triggerElement } = useSelectionPopoverRootContext()
   const bodyElementRef = React.useRef<HTMLDivElement | null>(null)
   const setBodyElement = React.useCallback((node: HTMLDivElement | null) => {
     bodyElementRef.current = node
@@ -354,6 +361,7 @@ function SelectionPopoverContent({
     anchor,
     isVisible: open,
     isPinned: pinned,
+    onFixedPositionChange,
   })
 
   const handleClose = React.useCallback(() => {
@@ -536,12 +544,17 @@ function SelectionPopoverDescription({
 function SelectionPopoverPin({
   children,
   className,
+  onPinChange,
   ...props
-}: React.ComponentProps<typeof Button>) {
+}: React.ComponentProps<typeof Button> & {
+  onPinChange?: (pinned: boolean) => void
+}) {
   const { pinned, setPinned } = useSelectionPopoverRootContext()
   const togglePinned = React.useCallback(() => {
-    setPinned(prev => !prev)
-  }, [setPinned])
+    const nextPinned = !pinned
+    setPinned(nextPinned)
+    onPinChange?.(nextPinned)
+  }, [pinned, setPinned, onPinChange])
   const label = pinned ? "Unpin popover" : "Pin popover"
 
   return (
