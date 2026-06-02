@@ -30,7 +30,7 @@ const selectionToolbarSpeakFeatureSchema = z.object({
   enabled: z.boolean(),
 })
 
-const selectionTriggerModeSchema = z.enum(["toolbar", "direct", "ctrl", "alt", "shift"])
+const selectionTriggerModeSchema = z.enum(["toolbar", "direct", "ctrl", "alt", "shift", "meta"])
 
 export type SelectionTriggerMode = z.infer<typeof selectionTriggerModeSchema>
 

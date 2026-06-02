@@ -292,6 +292,7 @@ options:
       ctrl: 按 Ctrl 触发
       alt: 按 Alt 触发
       shift: 按 Shift 触发
+      meta: 按 Cmd (⌘) 触发
     disabledSites:
       title: 划词翻译禁用网站
       description: 配置划词翻译应被禁用的网站
@@ -1072,6 +1073,7 @@ selectionTriggerMode:
   ctrl: 按 Ctrl
   alt: 按 Alt
   shift: 按 Shift
+  meta: 按 Cmd (⌘)
 translationHub:
   searchLanguages: 搜索语言...
   noLanguagesFound: 未找到语言

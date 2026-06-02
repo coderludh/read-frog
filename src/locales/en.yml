@@ -292,6 +292,7 @@ options:
       ctrl: Press Ctrl
       alt: Press Alt
       shift: Press Shift
+      meta: Press Cmd (⌘)
     disabledSites:
       title: Disabled Websites for Selection Translation
       description: Configure websites where selection translation should be disabled
@@ -1072,6 +1073,7 @@ selectionTriggerMode:
   ctrl: Ctrl
   alt: Alt
   shift: Shift
+  meta: Cmd (⌘)
 translationHub:
   searchLanguages: Search languages...
   noLanguagesFound: No languages found

@@ -7,6 +7,15 @@ const EDITABLE_ELEMENT_SELECTOR = "input, textarea, select, [contenteditable='tr
 
 const MODIFIER_DELAY_MS = 100
 
+function isMacPlatform(): boolean {
+  if (typeof navigator === "undefined")
+    return false
+  const platform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform
+    ?? navigator.platform
+    ?? ""
+  return /mac/i.test(platform)
+}
+
 function isEditableElement(element: Element | null): boolean {
   if (!element)
     return false
@@ -40,13 +49,13 @@ export function useSelectionTranslationTrigger(
   openPopover: (anchor?: { x: number, y: number }) => void,
 ) {
   const selectionTranslation = useAtomValue(configFieldsAtomMap.selectionTranslation)
+  const selectionToolbar = useAtomValue(configFieldsAtomMap.selectionToolbar)
   const triggerMode = selectionTranslation.triggerMode
-  const lastTriggeredTextRef = useRef<string>("")
   const modifierDelayTimerRef = useRef<number | null>(null)
   const openPopoverRef = useRef(openPopover)
   openPopoverRef.current = openPopover
 
-  const shouldShowToolbarOnMouseup = triggerMode === "toolbar" || triggerMode === "ctrl" || triggerMode === "alt" || triggerMode === "shift"
+  const shouldShowToolbarOnMouseup = triggerMode === "ctrl" || triggerMode === "alt" || triggerMode === "shift" || triggerMode === "meta" || (triggerMode === "toolbar" && selectionToolbar.enabled)
 
   const canTriggerTranslation = useCallback(() => {
     if (!selectionTranslation.enabled)
@@ -66,10 +75,6 @@ export function useSelectionTranslationTrigger(
     if (!text || !canTriggerTranslation())
       return
 
-    if (text === lastTriggeredTextRef.current)
-      return
-
-    lastTriggeredTextRef.current = text
     const effectiveAnchor = anchor ?? getSelectionAnchorPosition()
     openPopoverRef.current(effectiveAnchor)
   }, [canTriggerTranslation])
@@ -81,15 +86,11 @@ export function useSelectionTranslationTrigger(
     }
   }, [])
 
-  const clearLastTriggeredText = useCallback(() => {
-    lastTriggeredTextRef.current = ""
-  }, [])
-
   useEffect(() => {
     if (triggerMode === "toolbar" || triggerMode === "direct")
       return
 
-    const modifierKey = triggerMode === "ctrl" ? "Control" : triggerMode === "alt" ? "Alt" : triggerMode === "shift" ? "Shift" : null
+    const modifierKey = triggerMode === "ctrl" ? "Control" : triggerMode === "alt" ? "Alt" : triggerMode === "shift" ? "Shift" : triggerMode === "meta" && isMacPlatform() ? "Meta" : null
     if (!modifierKey)
       return
 
@@ -138,22 +139,9 @@ export function useSelectionTranslationTrigger(
     }
   }, [triggerMode, triggerTranslation, clearModifierTimer])
 
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      const selection = window.getSelection()
-      if (!selection || selection.toString().trim().length === 0) {
-        lastTriggeredTextRef.current = ""
-      }
-    }
-
-    document.addEventListener("selectionchange", handleSelectionChange)
-    return () => document.removeEventListener("selectionchange", handleSelectionChange)
-  }, [])
-
   return {
     shouldShowToolbarOnMouseup,
     triggerTranslation,
-    clearLastTriggeredText,
     triggerMode,
   }
 }

@@ -12,7 +12,7 @@ import {
 import { configFieldsAtomMap } from "@/utils/atoms/config"
 import { ConfigCard } from "../../components/config-card"
 
-const TRIGGER_MODES: SelectionTriggerMode[] = ["toolbar", "direct", "ctrl", "alt", "shift"]
+const TRIGGER_MODES: SelectionTriggerMode[] = ["toolbar", "direct", "ctrl", "alt", "shift", "meta"]
 
 export function SelectionTranslationTriggerMode() {
   const [selectionTranslation, setSelectionTranslation] = useAtom(

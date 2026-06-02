@@ -11,13 +11,13 @@ import {
 } from "@/components/ui/base-ui/select"
 import { configFieldsAtomMap } from "@/utils/atoms/config"
 
-const TRIGGER_MODES: SelectionTriggerMode[] = ["toolbar", "direct", "ctrl", "alt", "shift"]
+const TRIGGER_MODES: SelectionTriggerMode[] = ["toolbar", "direct", "ctrl", "alt", "shift", "meta"]
 
 export function SelectionTranslationTriggerModeSelector() {
   const [selectionTranslation, setSelectionTranslation] = useAtom(configFieldsAtomMap.selectionTranslation)
   const selectionToolbar = useAtomValue(configFieldsAtomMap.selectionToolbar)
 
-  const isDisabled = !selectionTranslation.enabled || !selectionToolbar.enabled
+  const isDisabled = !selectionTranslation.enabled
 
   return (
     <div className="flex items-center justify-between gap-2">
@@ -39,7 +39,11 @@ export function SelectionTranslationTriggerModeSelector() {
         <SelectContent>
           <SelectGroup>
             {TRIGGER_MODES.map(mode => (
-              <SelectItem key={mode} value={mode}>
+              <SelectItem
+                key={mode}
+                value={mode}
+                disabled={mode === "toolbar" && !selectionToolbar.enabled}
+              >
                 {i18n.t(`selectionTriggerMode.${mode}`)}
               </SelectItem>
             ))}
