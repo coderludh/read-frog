@@ -1,5 +1,5 @@
 name: Read Frog
-extName: Read Frog - Açık Kaynak Sürükleyici Çeviri
+extName: Read Frog - Çevir ve Öğren
 extDescription: Read Frog, herhangi bir web sitesinden dilleri derinlemesine öğrenmenize yardımcı olmak için tasarlanmış açık kaynaklı bir tarayıcı uzantısıdır.
 uninstallSurveyUrl: https://tally.so/r/nPK6Ob
 dataTypes:
@@ -82,11 +82,6 @@ options:
   apiProviders:
     title: API Sağlayıcıları
     description: Çeviri ve kelime analizi işlevleri için API sağlayıcılarını buradan yapılandırın. 20'den fazla yerleşik sağlayıcımız var ve OpenAI uyumlu tüm API sağlayıcılarını destekliyoruz.
-    promotion:
-      ai302:
-        description: 302.AI'ye kaydolmak ve 1 USD API kredisi almak için sağdaki bağlantıya tıklayın
-        action: Ücretsiz API Anahtarı Almak İçin Kaydolun
-        addProvider: 302.AI Yapılandırması Ekle
     addProvider: Sağlayıcı Ekle
     badges:
       featureCount: $1 özellik
@@ -109,6 +104,7 @@ options:
         apiKey: API Anahtarı
         baseURL: Base URL
         optional: İsteğe Bağlı
+      duplicate: Çoğalt
       delete: Sil
       deleteDialog:
         title: Sağlayıcıyı sil?
@@ -160,7 +156,6 @@ options:
         xai: Gerçek zamanlı veri erişimli Grok modelleri sunan Elon Musk'ın AI şirketi
         siliconflow: Çin ve uluslararası modeller için yüksek performanslı çıkarım platformu
         tensdaq: Yüksek maliyetli sabit fiyatlandırmayı ortadan kaldıran pazar odaklı fiyatlandırma ile devrimci açık artırma AI MaaS platformu
-        ai302: Kullandıkça öde API ile en son ve en kapsamlı modelleri sağlar
         openaiCompatible: Üçüncü taraf ve OpenAI API uyumlu
         deeplx: Resmi olmayan DeepL API
         deepl: Resmi DeepL API
@@ -292,6 +287,11 @@ options:
         description: Yüzen butona tıklandığında gerçekleştirilecek eylemi seçin
         panel: Yan Paneli Aç
         translate: Sayfa Çevirisini Aç/Kapat
+      side:
+        title: Düğme tarafı
+        description: Yüzen düğmenin sayfanın hangi kenarına sabitleneceğini seçin
+        left: Sol
+        right: Sağ
     selectionToolbar:
       globalToggle:
         title: Seçim Araç Çubuğunu Etkinleştir
@@ -345,7 +345,17 @@ options:
           actions: İşlemler
         form:
           name: Ad
-          icon: Simge (Iconify)
+          icon: Simge
+          iconField:
+            chooseAriaLabel: Simge seç
+            chooseTitle: Bir simge seçin
+            inputPlaceholder: Simge adını girin
+            helpAriaLabel: Daha fazla simge yardımı
+            helpTitle: Aradığınız simgeyi bulamadınız mı?
+            helpStepBrowsePrefix: ""
+            helpStepBrowseSuffix: üzerinde simgelere göz atın
+            helpStepCopyPrefix: "Örneğin "
+            helpStepCopySuffix: " simge adını kopyalayıp alana yapıştırın."
           provider: Sağlayıcı (yapılandırılmış çıktı desteği gerekir)
           selectProvider: Sağlayıcı seçin
           systemPrompt: Sistem Promptu
@@ -813,7 +823,7 @@ options:
   whatsNew:
     title: Yenilikler
   survey:
-    title: Altyazıyı Geliştir 🎁
+    title: Notebase Erken Erişim
   rateUs:
     title: Bizi Değerlendirin
 side:

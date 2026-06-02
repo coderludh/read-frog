@@ -1,5 +1,5 @@
 name: Read Frog
-extName: Read Frog - Иммерсивный переводчик с открытым исходным кодом
+extName: Read Frog - Переводи и учись
 extDescription: Read Frog — расширение браузера с открытым исходным кодом, которое поможет вам глубоко изучать языки на любом веб-сайте.
 uninstallSurveyUrl: https://tally.so/r/nPK6Ob
 dataTypes:
@@ -82,11 +82,6 @@ options:
   apiProviders:
     title: API-провайдеры
     description: Настройте API-провайдеров для функций перевода и анализа слов. У нас более 20 встроенных провайдеров и поддержка любых OpenAI-совместимых API.
-    promotion:
-      ai302:
-        description: Нажмите на ссылку справа, чтобы зарегистрироваться на 302.AI и получить 1 USD API-кредита
-        action: Зарегистрироваться для получения бесплатного API-ключа
-        addProvider: Добавить конфигурацию 302.AI
     addProvider: Добавить провайдера
     badges:
       featureCount: $1 функций
@@ -109,6 +104,7 @@ options:
         apiKey: API-ключ
         baseURL: Base URL
         optional: Необязательно
+      duplicate: Дублировать
       delete: Удалить
       deleteDialog:
         title: Удалить провайдера?
@@ -160,7 +156,6 @@ options:
         xai: ИИ-компания Илона Маска, предлагающая модели Grok с доступом к данным в реальном времени
         siliconflow: Высокопроизводительная платформа вывода для китайских и международных моделей
         tensdaq: Революционная MaaS-платформа с рыночным ценообразованием, устраняющая высокие фиксированные цены
-        ai302: Предоставляет новейшие и наиболее полные модели с оплатой по мере использования API
         openaiCompatible: Сторонние и OpenAI API-совместимые
         deeplx: Неофициальный DeepL API
         deepl: Официальный DeepL API
@@ -292,6 +287,11 @@ options:
         description: Выберите действие при нажатии на плавающую кнопку
         panel: Открыть боковую панель
         translate: Переключить перевод страницы
+      side:
+        title: Сторона кнопки
+        description: Выберите, с какой стороны страницы закреплять плавающую кнопку
+        left: Слева
+        right: Справа
     selectionToolbar:
       globalToggle:
         title: Включить панель выделения
@@ -345,7 +345,17 @@ options:
           actions: Действия
         form:
           name: Название
-          icon: Иконка (Iconify)
+          icon: Иконка
+          iconField:
+            chooseAriaLabel: Выбрать иконку
+            chooseTitle: Выберите иконку
+            inputPlaceholder: Введите имя иконки
+            helpAriaLabel: Справка по иконкам
+            helpTitle: Не нашли нужную иконку?
+            helpStepBrowsePrefix: Посмотреть иконки на
+            helpStepBrowseSuffix: ""
+            helpStepCopyPrefix: "Скопируйте имя иконки, например "
+            helpStepCopySuffix: ", и вставьте его в поле."
           provider: Провайдер (требуется поддержка структурированного вывода)
           selectProvider: Выберите провайдера
           systemPrompt: Системный промпт
@@ -813,7 +823,7 @@ options:
   whatsNew:
     title: Что нового
   survey:
-    title: Улучшить субтитры 🎁
+    title: Ранний доступ к Notebase
   rateUs:
     title: Оцените нас
 side:

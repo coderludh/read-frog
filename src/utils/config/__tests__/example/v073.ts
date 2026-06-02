@@ -2,7 +2,7 @@ import type { TestSeriesObject } from "./types"
 
 export const testSeries: TestSeriesObject = {
   "complex-config-from-v020": {
-    description: "Adds selectionTranslation config section",
+    description: "Adds selectionTranslation config section and converts 302.AI providers",
     config: {
       language: {
         sourceCode: "spa",
@@ -53,6 +53,8 @@ export const testSeries: TestSeriesObject = {
           enabled: true,
           name: "Gemini",
           provider: "google",
+          apiKey: undefined,
+          baseURL: undefined,
           model: {
             model: "gemini-2.5-pro",
             isCustomModel: false,
@@ -64,6 +66,7 @@ export const testSeries: TestSeriesObject = {
           enabled: true,
           name: "DeepLX",
           provider: "deeplx",
+          apiKey: undefined,
           baseURL: "https://deeplx.vercel.app/translate",
         },
       ],
