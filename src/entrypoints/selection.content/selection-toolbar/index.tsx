@@ -231,7 +231,7 @@ export function SelectionToolbar() {
   const selectionToolbar = useAtomValue(configFieldsAtomMap.selectionToolbar)
   const dropdownOpenRef = useRef(false)
   const directTriggerTimerRef = useRef<number | null>(null)
-  const { openPopover } = useSelectionTranslationPopover()
+  const { openPopover, stopAutoPronunciation } = useSelectionTranslationPopover()
   const { shouldShowToolbarOnMouseup, triggerTranslation } = useSelectionTranslationTrigger(openPopover)
 
   const updatePosition = useCallback(() => {
@@ -374,6 +374,7 @@ export function SelectionToolbar() {
       selectionStartRef.current = { x: e.clientX, y: e.clientY }
 
       clearSelectionState()
+      stopAutoPronunciation()
       setIsSelectionToolbarVisible(false)
     }
 
@@ -428,7 +429,7 @@ export function SelectionToolbar() {
         directTriggerTimerRef.current = null
       }
     }
-  }, [clearSelectionState, isSelectionToolbarVisible, setIsSelectionToolbarVisible, setSelectionState, shouldShowToolbarOnMouseup, triggerTranslation, updatePosition])
+  }, [clearSelectionState, isSelectionToolbarVisible, setIsSelectionToolbarVisible, setSelectionState, shouldShowToolbarOnMouseup, stopAutoPronunciation, triggerTranslation, updatePosition])
 
   useEffect(() => {
     const handler = (e: Event) => {

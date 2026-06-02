@@ -8,6 +8,7 @@ import { useAtomValue, useSetAtom } from "jotai"
 import { createContext, use, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { SelectionPopover } from "@/components/ui/selection-popover"
+import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { ANALYTICS_FEATURE, ANALYTICS_SURFACE } from "@/types/analytics"
 import { isLLMProviderConfig, isTranslateProviderConfig } from "@/types/config/provider"
 import { createFeatureUsageContext, trackFeatureUsed } from "@/utils/analytics"
@@ -157,6 +158,7 @@ interface SelectionTranslationContextValue {
   prepareToolbarOpen: () => void
   openPopover: (anchor?: { x: number, y: number }) => void
   reTriggerTranslation: () => void
+  stopAutoPronunciation: () => void
 }
 
 const SelectionTranslationContext = createContext<SelectionTranslationContextValue | null>(null)
@@ -207,6 +209,12 @@ export function SelectionTranslationProvider({
   const lastTranslationRunKeyRef = useRef<string | null>(null)
   const runIdRef = useRef(0)
   const { resolveContextMenuSelectionRequest } = useSelectionContextMenuRequestResolver(selectionSession)
+  const { play: ttsPlay, stop: ttsStop } = useTextToSpeech(ANALYTICS_SURFACE.SELECTION_TOOLBAR)
+  const selectionTranslation = useAtomValue(configFieldsAtomMap.selectionTranslation)
+  const selectionToolbar = useAtomValue(configFieldsAtomMap.selectionToolbar)
+  const isFirefox = import.meta.env.BROWSER === "firefox"
+  const lastAutoPlaySessionIdRef = useRef<number | null>(null)
+  const ttsConfig = useAtomValue(configFieldsAtomMap.tts)
   const selectionText = activeSession?.selectionSnapshot.text ?? null
   const paragraphsText = activeSession?.contextSnapshot.text ?? selectionText
   const titleText = document.title || null
@@ -218,6 +226,48 @@ export function SelectionTranslationProvider({
     () => JSON.stringify(translateRequest),
     [translateRequest],
   )
+
+  useEffect(() => {
+    // Only trigger when translation has completed (isTranslating false, result available)
+    if (isTranslating) {
+      return
+    }
+
+    // No translated text means translation failed or hasn't started — skip
+    if (!translatedText) {
+      return
+    }
+
+    // No active session — skip
+    if (!activeSession) {
+      return
+    }
+
+    // Dedup: already played for this session
+    if (lastAutoPlaySessionIdRef.current === activeSession.id) {
+      return
+    }
+
+    // Feature gate: autoPronunciation must be enabled
+    if (!selectionTranslation.autoPronunciation) {
+      return
+    }
+
+    // Feature gate: speak must be enabled and not Firefox
+    if (isFirefox || !selectionToolbar.features.speak.enabled) {
+      return
+    }
+
+    // No source text — skip
+    if (!selectionText) {
+      return
+    }
+
+    // Mark this session as played
+    lastAutoPlaySessionIdRef.current = activeSession.id
+
+    void ttsPlay(selectionText, ttsConfig)
+  }, [isTranslating, translatedText, activeSession, selectionTranslation.autoPronunciation, selectionToolbar.features.speak.enabled, isFirefox, selectionText, ttsConfig, ttsPlay])
 
   const resetPopoverSession = useCallback((options?: { clearAnchor?: boolean }) => {
     setActiveSession(null)
@@ -428,6 +478,8 @@ export function SelectionTranslationProvider({
       }
     }
     else {
+      ttsStop()
+      lastAutoPlaySessionIdRef.current = null
       if (pinned) {
         lastTranslationRunKeyRef.current = null
       }
@@ -559,11 +611,17 @@ export function SelectionTranslationProvider({
     }
   }, [setFixedPosition, anchor])
 
+  const stopAutoPronunciation = useCallback(() => {
+    ttsStop()
+    lastAutoPlaySessionIdRef.current = null
+  }, [ttsStop])
+
   const contextValue = useMemo<SelectionTranslationContextValue>(() => ({
     prepareToolbarOpen,
     openPopover,
     reTriggerTranslation,
-  }), [prepareToolbarOpen, openPopover, reTriggerTranslation])
+    stopAutoPronunciation,
+  }), [prepareToolbarOpen, openPopover, reTriggerTranslation, stopAutoPronunciation])
 
   return (
     <SelectionTranslationContext value={contextValue}>
