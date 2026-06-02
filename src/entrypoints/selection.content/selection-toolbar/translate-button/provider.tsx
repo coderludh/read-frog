@@ -306,8 +306,10 @@ export function SelectionTranslationProvider({
 
   const handleRegenerate = useCallback(() => {
     cancelCurrentTranslation()
+    ttsStop()
+    lastAutoPlaySessionIdRef.current = null
     setRerunNonce(prev => prev + 1)
-  }, [cancelCurrentTranslation])
+  }, [cancelCurrentTranslation, ttsStop])
 
   const runTranslation = useCallback(async (runId: number) => {
     const preparedText = prepareTranslationText(selectionText)
@@ -328,6 +330,7 @@ export function SelectionTranslationProvider({
     setTranslatedText(undefined)
     setThinking(null)
     setError(null)
+    lastAutoPlaySessionIdRef.current = null
 
     const providerConfig = translateRequest.providerConfig
     if (!providerConfig || !isTranslateProviderConfig(providerConfig)) {
