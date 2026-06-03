@@ -345,9 +345,14 @@ export function SelectionToolbar() {
             setIsSelectionToolbarVisible(true)
           }
           else {
-            // Defer to next macrotask so React flushes the selectionSession atom
-            // update before openPopover reads it via ref
-            directTriggerTimerRef.current = window.setTimeout(triggerTranslation, 0, { x: docX, y: docY })
+            // Defer to next animation frame so React flushes the selectionSession
+            // atom update and updates selectionSessionRef.current before openPopover reads it.
+            // Using rAF instead of setTimeout(0) guarantees React has committed
+            // (React commits before paint, and rAF runs before the next paint).
+            directTriggerTimerRef.current = requestAnimationFrame(() => {
+              directTriggerTimerRef.current = null
+              triggerTranslation({ x: docX, y: docY })
+            })
           }
         }
       })
@@ -427,7 +432,7 @@ export function SelectionToolbar() {
         cancelAnimationFrame(animationFrameId)
       }
       if (directTriggerTimerRef.current !== null) {
-        clearTimeout(directTriggerTimerRef.current)
+        cancelAnimationFrame(directTriggerTimerRef.current)
         directTriggerTimerRef.current = null
       }
     }
