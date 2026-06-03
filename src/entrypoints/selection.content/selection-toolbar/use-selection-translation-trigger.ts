@@ -5,7 +5,7 @@ import { matchDomainPattern } from "@/utils/url"
 
 const EDITABLE_ELEMENT_SELECTOR = "input, textarea, select, [contenteditable='true'], [contenteditable='plaintext-only']"
 
-const MODIFIER_DELAY_MS = 100
+const MAX_SHORT_PRESS_MS = 500
 
 function isMacPlatform(): boolean {
   if (typeof navigator === "undefined")
@@ -51,7 +51,11 @@ export function useSelectionTranslationTrigger(
   const selectionTranslation = useAtomValue(configFieldsAtomMap.selectionTranslation)
   const selectionToolbar = useAtomValue(configFieldsAtomMap.selectionToolbar)
   const triggerMode = selectionTranslation.triggerMode
-  const modifierDelayTimerRef = useRef<number | null>(null)
+  const modifierStateRef = useRef<{
+    pressStartTime: number | null
+    companionKeyPressed: boolean
+    pointerActivity: boolean
+  }>({ pressStartTime: null, companionKeyPressed: false, pointerActivity: false })
   const openPopoverRef = useRef(openPopover)
   openPopoverRef.current = openPopover
 
@@ -79,13 +83,6 @@ export function useSelectionTranslationTrigger(
     openPopoverRef.current(effectiveAnchor)
   }, [canTriggerTranslation])
 
-  const clearModifierTimer = useCallback(() => {
-    if (modifierDelayTimerRef.current !== null) {
-      clearTimeout(modifierDelayTimerRef.current)
-      modifierDelayTimerRef.current = null
-    }
-  }, [])
-
   useEffect(() => {
     if (triggerMode === "toolbar" || triggerMode === "direct")
       return
@@ -101,43 +98,69 @@ export function useSelectionTranslationTrigger(
         return
       if (isComposing())
         return
-      if (e.key !== modifierKey)
-        return
 
-      // All modifier-triggered modes use a short delay to avoid
-      // firing during common combos (Ctrl+C/V/A/F, Alt+Tab, etc.)
-      clearModifierTimer()
-      modifierDelayTimerRef.current = window.setTimeout(() => {
-        modifierDelayTimerRef.current = null
-        triggerTranslation()
-      }, MODIFIER_DELAY_MS)
-    }
-
-    // Cancel the timer when any other key is pressed (combo key detected)
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key !== modifierKey) {
-        clearModifierTimer()
+      if (e.key === modifierKey) {
+        // Modifier key pressed — start tracking
+        modifierStateRef.current = {
+          pressStartTime: Date.now(),
+          companionKeyPressed: false,
+          pointerActivity: false,
+        }
+      }
+      else if (modifierStateRef.current.pressStartTime !== null) {
+        // Another key pressed while modifier is held — mark as companion
+        modifierStateRef.current.companionKeyPressed = true
       }
     }
 
-    // Cancel the timer on mouse/wheel events (Ctrl+Wheel zoom, Alt+Click, etc.)
-    const handlePointerCancel = () => {
-      clearModifierTimer()
+    // Trigger on modifier keyup if short press + no companion + no pointer activity
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const state = modifierStateRef.current
+
+      if (e.key === modifierKey && state.pressStartTime !== null) {
+        const holdDuration = Date.now() - state.pressStartTime
+
+        if (
+          !state.companionKeyPressed
+          && !state.pointerActivity
+          && holdDuration < MAX_SHORT_PRESS_MS
+        ) {
+          triggerTranslation()
+        }
+
+        // Reset state regardless of outcome
+        modifierStateRef.current = {
+          pressStartTime: null,
+          companionKeyPressed: false,
+          pointerActivity: false,
+        }
+      }
+      else if (state.pressStartTime !== null && e.key !== modifierKey) {
+        // Companion key released while modifier still held — still mark as companion
+        modifierStateRef.current.companionKeyPressed = true
+      }
+    }
+
+    // Mark pointer activity while modifier is held
+    const handlePointerActivity = () => {
+      if (modifierStateRef.current.pressStartTime !== null) {
+        modifierStateRef.current.pointerActivity = true
+      }
     }
 
     document.addEventListener("keydown", handleKeyDown)
     document.addEventListener("keyup", handleKeyUp)
-    document.addEventListener("wheel", handlePointerCancel, { passive: true })
-    document.addEventListener("mousedown", handlePointerCancel)
+    document.addEventListener("wheel", handlePointerActivity, { passive: true })
+    document.addEventListener("mousedown", handlePointerActivity)
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
       document.removeEventListener("keyup", handleKeyUp)
-      document.removeEventListener("wheel", handlePointerCancel)
-      document.removeEventListener("mousedown", handlePointerCancel)
-      clearModifierTimer()
+      document.removeEventListener("wheel", handlePointerActivity)
+      document.removeEventListener("mousedown", handlePointerActivity)
+      modifierStateRef.current = { pressStartTime: null, companionKeyPressed: false, pointerActivity: false }
     }
-  }, [triggerMode, triggerTranslation, clearModifierTimer])
+  }, [triggerMode, triggerTranslation])
 
   return {
     shouldShowToolbarOnMouseup,
