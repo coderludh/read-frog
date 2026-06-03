@@ -20,6 +20,14 @@ vi.mock("../custom-action-button", () => ({
   SelectionToolbarCustomActionButtons: () => null,
 }))
 
+vi.mock("../translate-button/provider", () => ({
+  useSelectionTranslationPopover: () => ({
+    openPopover: vi.fn(),
+    stopAutoPronunciation: vi.fn(),
+  }),
+  SelectionTranslationProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 // Mock atoms
 vi.mock("@/utils/atoms/config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/utils/atoms/config")>()
