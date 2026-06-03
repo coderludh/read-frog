@@ -6,7 +6,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { IconGripHorizontal, IconPin, IconPinnedFilled, IconX } from "@tabler/icons-react"
-import { atom, useAtom } from "jotai"
+import { atom, useAtom, useAtomValue } from "jotai"
 import * as React from "react"
 import { Rnd } from "react-rnd"
 import { Button } from "@/components/ui/base-ui/button"
@@ -14,6 +14,7 @@ import {
   SELECTION_CONTENT_OVERLAY_LAYERS,
   SELECTION_CONTENT_OVERLAY_ROOT_ATTRIBUTE,
 } from "@/entrypoints/selection.content/overlay-layers"
+import { popoverFixedPositionAtom } from "@/utils/atoms/popover-position"
 import { NOTRANSLATE_CLASS } from "@/utils/constants/dom-labels"
 import { cn } from "@/utils/styles/utils"
 import { usePreventScrollThrough } from "./use-prevent-scroll-through"
@@ -340,6 +341,7 @@ function SelectionPopoverContent({
   finalFocus?: DialogPrimitive.Popup.Props["finalFocus"]
 }) {
   const { open, setOpen, anchor, pinned, onFixedPositionChange, triggerElement } = useSelectionPopoverRootContext()
+  const fixedPosition = useAtomValue(popoverFixedPositionAtom)
   const bodyElementRef = React.useRef<HTMLDivElement | null>(null)
   const setBodyElement = React.useCallback((node: HTMLDivElement | null) => {
     bodyElementRef.current = node
@@ -362,6 +364,7 @@ function SelectionPopoverContent({
     isVisible: open,
     isPinned: pinned,
     onFixedPositionChange,
+    persistedWidthRatio: fixedPosition?.widthRatio,
   })
 
   const handleClose = React.useCallback(() => {

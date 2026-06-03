@@ -28,6 +28,7 @@ interface UseSelectionPopoverLayoutOptions {
   isVisible: boolean
   isPinned?: boolean
   onFixedPositionChange?: (pos: PopoverFixedPosition | null) => void
+  persistedWidthRatio?: number
 }
 
 interface UseSelectionPopoverLayoutResult {
@@ -93,13 +94,17 @@ function getEffectiveMinHeight(maxHeight: number) {
   return Math.min(MIN_HEIGHT, Math.max(maxHeight, 1))
 }
 
-function getInitialWidth(maxWidth: number) {
+function getInitialWidth(maxWidth: number, widthRatio?: number) {
+  if (widthRatio != null && widthRatio > 0) {
+    const ratioWidth = Math.round(widthRatio * maxWidth)
+    return clamp(ratioWidth, MIN_WIDTH, maxWidth)
+  }
   return maxWidth > 0 ? Math.min(DEFAULT_WIDTH, maxWidth) : DEFAULT_WIDTH
 }
 
-function getInitialPosition(anchor: Position | null) {
+function getInitialPosition(anchor: Position | null, widthRatio?: number) {
   const maxWidth = getViewportMaxWidth()
-  const initialWidth = getInitialWidth(maxWidth)
+  const initialWidth = getInitialWidth(maxWidth, widthRatio)
   const maxX = Math.max(0, window.innerWidth - initialWidth)
   const maxY = Math.max(0, window.innerHeight)
 
@@ -194,6 +199,7 @@ export function useSelectionPopoverLayout({
   isVisible,
   isPinned = false,
   onFixedPositionChange,
+  persistedWidthRatio,
 }: UseSelectionPopoverLayoutOptions): UseSelectionPopoverLayoutResult {
   const rndRef = useRef<Rnd | null>(null)
   const resizeFrameRef = useRef<number | null>(null)
@@ -246,7 +252,7 @@ export function useSelectionPopoverLayout({
     if (nextPosition.x !== currentRect.left || nextPosition.y !== currentRect.top) {
       if (immediate) {
         // ResizeObserver fires after layout; flush to avoid a visible overflow frame.
-        // eslint-disable-next-line react/dom-no-flush-sync
+        // eslint-disable-next-line react-dom/no-flush-sync
         flushSync(() => {
           setPosition(nextPosition)
         })
@@ -451,7 +457,7 @@ export function useSelectionPopoverLayout({
     )
     setPosition(nextPosition)
 
-    if (isPinned && popoverRect && onFixedPositionChange) {
+    if (popoverRect && onFixedPositionChange) {
       onFixedPositionChange({
         xRatio: nextPosition.x / window.innerWidth,
         yRatio: nextPosition.y / window.innerHeight,
@@ -460,7 +466,7 @@ export function useSelectionPopoverLayout({
     }
 
     scheduleViewportLayout()
-  }, [scheduleViewportLayout, isPinned, onFixedPositionChange])
+  }, [scheduleViewportLayout, onFixedPositionChange])
 
   const handleResizeStop = useCallback((element: HTMLElement, position: Position) => {
     const manualSize = {
@@ -484,7 +490,7 @@ export function useSelectionPopoverLayout({
     setPosition(nextPosition)
     rndRef.current?.updateSize(manualSize)
 
-    if (isPinned && onFixedPositionChange) {
+    if (onFixedPositionChange) {
       onFixedPositionChange({
         xRatio: nextPosition.x / window.innerWidth,
         yRatio: nextPosition.y / window.innerHeight,
@@ -493,7 +499,7 @@ export function useSelectionPopoverLayout({
     }
 
     scheduleViewportLayout()
-  }, [scheduleViewportLayout, isPinned, onFixedPositionChange])
+  }, [scheduleViewportLayout, onFixedPositionChange])
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
     event.stopPropagation()
@@ -551,10 +557,10 @@ export function useSelectionPopoverLayout({
   return {
     rndRef,
     isDragging,
-    position: position ?? getInitialPosition(anchor),
+    position: position ?? getInitialPosition(anchor, persistedWidthRatio),
     defaultLayout: {
-      ...getInitialPosition(anchor),
-      width: getInitialWidth(getViewportMaxWidth()),
+      ...getInitialPosition(anchor, persistedWidthRatio),
+      width: getInitialWidth(getViewportMaxWidth(), persistedWidthRatio),
       height: "auto",
     },
     minWidth: getEffectiveMinWidth(getViewportMaxWidth()),
