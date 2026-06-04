@@ -1,10 +1,11 @@
+import type { LangCodeISO6393 } from "@read-frog/definitions"
 import type { AnalyticsSurface, FeatureUsageContext } from "@/types/analytics"
 import type { TTSConfig } from "@/types/config/tts"
+import { i18n } from "#imports"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAtomValue } from "jotai"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
-import { i18n } from "#imports"
 import { ANALYTICS_FEATURE, ANALYTICS_SURFACE } from "@/types/analytics"
 import { createFeatureUsageContext, trackFeatureUsed } from "@/utils/analytics"
 import { configFieldsAtomMap } from "@/utils/atoms/config"
@@ -19,6 +20,7 @@ interface PlayAudioParams {
   ttsConfig: TTSConfig
   analyticsContext: FeatureUsageContext
   forcedVoice?: string
+  sourceLanguage?: LangCodeISO6393 | null
 }
 
 interface SynthesizedAudioChunk {
@@ -53,6 +55,7 @@ async function resolveVoiceForText(
   ttsConfig: TTSConfig,
   enableLLM: boolean,
   forcedVoice?: string,
+  sourceLanguage?: LangCodeISO6393 | null,
 ): Promise<string> {
   if (forcedVoice) {
     logger.info("[TextToSpeech] Using forced voice for text", {
@@ -60,6 +63,16 @@ async function resolveVoiceForText(
       forcedVoice,
     })
     return forcedVoice
+  }
+
+  // If source language is known (not "auto"), use it directly for voice selection
+  // This avoids unreliable franc detection for short words
+  if (sourceLanguage) {
+    logger.info("[TextToSpeech] Using known source language for voice", {
+      text,
+      sourceLanguage,
+    })
+    return selectTTSVoice(ttsConfig, sourceLanguage)
   }
 
   const detectedLanguage = await detectLanguage(text, {
@@ -145,7 +158,7 @@ export function useTextToSpeech(surface: AnalyticsSurface = ANALYTICS_SURFACE.SE
     meta: {
       suppressToast: true,
     },
-    mutationFn: async ({ text, ttsConfig, analyticsContext, forcedVoice }) => {
+    mutationFn: async ({ text, ttsConfig, analyticsContext, forcedVoice, sourceLanguage }) => {
       stop()
       shouldStopRef.current = false
 
@@ -153,7 +166,7 @@ export function useTextToSpeech(surface: AnalyticsSurface = ANALYTICS_SURFACE.SE
       activeRequestIdRef.current = requestId
       let didStartPlayback = false
 
-      const selectedVoice = await resolveVoiceForText(text, ttsConfig, languageDetection.mode === "llm", forcedVoice)
+      const selectedVoice = await resolveVoiceForText(text, ttsConfig, languageDetection.mode === "llm", forcedVoice, sourceLanguage)
       if (shouldStopRef.current || activeRequestIdRef.current !== requestId) {
         return
       }
@@ -245,11 +258,12 @@ export function useTextToSpeech(surface: AnalyticsSurface = ANALYTICS_SURFACE.SE
     },
   })
 
-  const play = (text: string, ttsConfig: TTSConfig, options?: { forcedVoice?: string }) => {
+  const play = (text: string, ttsConfig: TTSConfig, options?: { forcedVoice?: string, sourceLanguage?: LangCodeISO6393 | null }) => {
     return playMutation.mutateAsync({
       text,
       ttsConfig,
       forcedVoice: options?.forcedVoice,
+      sourceLanguage: options?.sourceLanguage,
       analyticsContext: createFeatureUsageContext(
         ANALYTICS_FEATURE.TEXT_TO_SPEECH,
         surface,

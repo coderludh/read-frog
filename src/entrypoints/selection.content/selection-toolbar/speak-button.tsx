@@ -1,17 +1,25 @@
+import type { LangCodeISO6393 } from "@read-frog/definitions"
+import { i18n } from "#imports"
 import { IconLoader2, IconPlayerStopFilled, IconVolume } from "@tabler/icons-react"
 import { useAtomValue } from "jotai"
 import { useCallback } from "react"
 import { toast } from "sonner"
-import { i18n } from "#imports"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { ANALYTICS_SURFACE } from "@/types/analytics"
 import { configFieldsAtomMap } from "@/utils/atoms/config"
 import { SelectionToolbarTooltip, useSelectionTooltipState } from "../components/selection-tooltip"
-import { selectionContentAtom } from "./atoms"
+import { selectionContentAtom, selectionToolbarTranslateRequestAtom } from "./atoms"
+
+/** Resolve source language for TTS voice selection. Returns null for "auto". */
+function resolveSourceLanguage(sourceCode: string): LangCodeISO6393 | null {
+  return sourceCode === "auto" ? null : sourceCode as LangCodeISO6393
+}
 
 export function SpeakButton() {
   const selectionContent = useAtomValue(selectionContentAtom)
   const ttsConfig = useAtomValue(configFieldsAtomMap.tts)
+  const translateRequest = useAtomValue(selectionToolbarTranslateRequestAtom)
+  const sourceLanguage = resolveSourceLanguage(translateRequest.language.sourceCode)
   const { play, stop, isFetching, isPlaying } = useTextToSpeech(ANALYTICS_SURFACE.SELECTION_TOOLBAR)
   const isBusy = isFetching || isPlaying
   const { handlePress, onOpenChange: handleTooltipOpenChange, open: tooltipOpen } = useSelectionTooltipState()
@@ -29,8 +37,8 @@ export function SpeakButton() {
     }
 
     handlePress()
-    void play(selectionContent, ttsConfig)
-  }, [handlePress, isBusy, play, selectionContent, stop, ttsConfig])
+    void play(selectionContent, ttsConfig, { sourceLanguage })
+  }, [handlePress, isBusy, play, selectionContent, stop, ttsConfig, sourceLanguage])
 
   const tooltipText = isFetching
     ? i18n.t("speak.fetchingAudio")

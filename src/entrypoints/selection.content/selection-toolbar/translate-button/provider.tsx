@@ -1,3 +1,4 @@
+import type { LangCodeISO6393 } from "@read-frog/definitions"
 import type { ReactNode } from "react"
 import type { SelectionSession, SelectionToolbarTranslateRequestSlice } from "../atoms"
 import type { SelectionToolbarInlineError } from "../inline-error"
@@ -266,8 +267,13 @@ export function SelectionTranslationProvider({
     // Mark this session as played
     lastAutoPlaySessionIdRef.current = activeSession.id
 
-    void ttsPlay(selectionText, ttsConfig)
-  }, [isTranslating, translatedText, activeSession, selectionTranslation.autoPronunciation, selectionToolbar.features.speak.enabled, isFirefox, selectionText, ttsConfig, ttsPlay])
+    // Use known source language for voice selection (bypass unreliable franc detection)
+    const sourceLanguage = translateRequest.language.sourceCode === "auto"
+      ? null
+      : translateRequest.language.sourceCode as LangCodeISO6393
+
+    void ttsPlay(selectionText, ttsConfig, { sourceLanguage })
+  }, [isTranslating, translatedText, activeSession, selectionTranslation.autoPronunciation, selectionToolbar.features.speak.enabled, isFirefox, selectionText, ttsConfig, ttsPlay, translateRequest.language.sourceCode])
 
   const resetPopoverSession = useCallback((options?: { clearAnchor?: boolean }) => {
     setActiveSession(null)
