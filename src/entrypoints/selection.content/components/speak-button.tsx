@@ -7,12 +7,23 @@ import { buttonVariants } from "@/components/ui/base-ui/button"
 import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { ANALYTICS_SURFACE } from "@/types/analytics"
 import { configFieldsAtomMap } from "@/utils/atoms/config"
+import { resolveLanguageCodeFromLocale } from "@/utils/content/page-language"
 import { cn } from "@/utils/styles/utils"
 import { SelectionPopoverTooltip, useSelectionTooltipState } from "./selection-tooltip"
 
-/** Resolve source language for TTS voice selection. Returns null for "auto". */
+/**
+ * Resolve source language for TTS voice selection.
+ * When sourceCode is "auto", falls back to the page's declared language
+ * from <html lang="...">, which is far more reliable than franc detection
+ * on individual short words.
+ */
 function resolveSourceLanguage(sourceCode: string): LangCodeISO6393 | null {
-  return sourceCode === "auto" ? null : sourceCode as LangCodeISO6393
+  if (sourceCode !== "auto") {
+    return sourceCode as LangCodeISO6393
+  }
+
+  // Use page's declared language as a reliable proxy for selected text language
+  return resolveLanguageCodeFromLocale(document.documentElement.lang)
 }
 
 export function SpeakButton({ text }: { text: string | undefined }) {

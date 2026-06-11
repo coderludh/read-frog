@@ -18,6 +18,7 @@ import { popoverFixedPositionAtom } from "@/utils/atoms/popover-position"
 import { filterEnabledProvidersConfig } from "@/utils/config/helpers"
 import { buildFeatureProviderPatch } from "@/utils/constants/feature-providers"
 import { streamBackgroundText } from "@/utils/content-script/background-stream-client"
+import { resolveLanguageCodeFromLocale } from "@/utils/content/page-language"
 import { prepareTranslationText } from "@/utils/host/translate/text-preparation"
 import { translateTextCore } from "@/utils/host/translate/translate-text"
 import { getOrCreateWebPageContext } from "@/utils/host/translate/webpage-context"
@@ -268,8 +269,9 @@ export function SelectionTranslationProvider({
     lastAutoPlaySessionIdRef.current = activeSession.id
 
     // Use known source language for voice selection (bypass unreliable franc detection)
+    // When sourceCode is "auto", fall back to page's declared language from <html lang>
     const sourceLanguage = translateRequest.language.sourceCode === "auto"
-      ? null
+      ? resolveLanguageCodeFromLocale(document.documentElement.lang)
       : translateRequest.language.sourceCode as LangCodeISO6393
 
     void ttsPlay(selectionText, ttsConfig, { sourceLanguage })
