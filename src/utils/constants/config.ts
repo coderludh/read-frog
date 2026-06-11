@@ -20,7 +20,7 @@ export const THEME_STORAGE_KEY = "theme"
 export const POPOVER_FIXED_POSITION_STORAGE_KEY = "popoverFixedPosition"
 export const SELECTION_POPOVER_PINNED_STORAGE_KEY = "selectionPopoverPinned"
 export const DEFAULT_DETECTED_CODE = "eng" as const
-export const CONFIG_SCHEMA_VERSION = 73
+export const CONFIG_SCHEMA_VERSION = 74
 
 export const DEFAULT_FLOATING_BUTTON_POSITION = 0.66
 export const DEFAULT_FLOATING_BUTTON_SIDE: FloatingButtonSide = "right"
@@ -106,6 +106,7 @@ export const DEFAULT_CONFIG: Config = {
     triggerMode: "toolbar",
     providerId: "google-translate-default",
     autoPronunciation: false,
+    skipTargetLanguage: true,
     disabledSites: [],
   },
   selectionToolbar: {

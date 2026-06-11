@@ -3,6 +3,7 @@ import { PageLayout } from "../../components/page-layout"
 import { SelectionTranslationAutoPronunciation } from "./selection-translation-auto-pronunciation"
 import { SelectionTranslationDisabledSites } from "./selection-translation-disabled-sites"
 import { SelectionTranslationProvider } from "./selection-translation-provider"
+import { SelectionTranslationSkipTargetLanguage } from "./selection-translation-skip-target-language"
 import { SelectionTranslationToggle } from "./selection-translation-toggle"
 import { SelectionTranslationTriggerMode } from "./selection-translation-trigger-mode"
 
@@ -13,6 +14,7 @@ export function SelectionTranslationPage() {
         <SelectionTranslationToggle />
         <SelectionTranslationProvider />
         <SelectionTranslationAutoPronunciation />
+        <SelectionTranslationSkipTargetLanguage />
         <SelectionTranslationTriggerMode />
         <SelectionTranslationDisabledSites />
       </div>

@@ -1,6 +1,7 @@
 import { useAtomValue } from "jotai"
 import { useCallback, useEffect, useRef } from "react"
 import { configFieldsAtomMap } from "@/utils/atoms/config"
+import { isTextInTargetLanguageScript } from "@/utils/content/script-detect"
 import { matchDomainPattern } from "@/utils/url"
 
 const EDITABLE_ELEMENT_SELECTOR = "input, textarea, select, [contenteditable='true'], [contenteditable='plaintext-only']"
@@ -50,6 +51,7 @@ export function useSelectionTranslationTrigger(
 ) {
   const selectionTranslation = useAtomValue(configFieldsAtomMap.selectionTranslation)
   const selectionToolbar = useAtomValue(configFieldsAtomMap.selectionToolbar)
+  const language = useAtomValue(configFieldsAtomMap.language)
   const triggerMode = selectionTranslation.triggerMode
   const modifierStateRef = useRef<{
     pressStartTime: number | null
@@ -79,9 +81,13 @@ export function useSelectionTranslationTrigger(
     if (!text || !canTriggerTranslation())
       return
 
+    // Skip if selected text is predominantly in the target language script
+    if (selectionTranslation.skipTargetLanguage && isTextInTargetLanguageScript(text, language.targetCode))
+      return
+
     const effectiveAnchor = anchor ?? getSelectionAnchorPosition()
     openPopoverRef.current(effectiveAnchor)
-  }, [canTriggerTranslation])
+  }, [canTriggerTranslation, selectionTranslation.skipTargetLanguage, language.targetCode])
 
   useEffect(() => {
     if (triggerMode === "toolbar" || triggerMode === "direct")

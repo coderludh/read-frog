@@ -284,6 +284,9 @@ options:
     autoPronunciation:
       title: 启用单词自动朗读
       description: 翻译后自动朗读选中的单词
+    skipTargetLanguage:
+      title: 跳过目标语言
+      description: 当选中的文本已经是目标语言时，不触发翻译
     triggerMode:
       title: 划词翻译触发方式
       description: 选择在网页中选中文本后，如何触发划词翻译

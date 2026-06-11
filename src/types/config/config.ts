@@ -40,6 +40,7 @@ const selectionTranslationSchema = z.object({
   triggerMode: selectionTriggerModeSchema,
   providerId: z.string().nonempty(),
   autoPronunciation: z.boolean(),
+  skipTargetLanguage: z.boolean(),
   disabledSites: z.array(z.string()),
 })
 

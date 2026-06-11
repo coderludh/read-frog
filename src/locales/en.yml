@@ -284,6 +284,9 @@ options:
     autoPronunciation:
       title: Enable Automatic Word Pronunciation
       description: Automatically pronounce the selected word after translation
+    skipTargetLanguage:
+      title: Skip Target Language
+      description: Don't trigger translation when the selected text is already in your target language
     triggerMode:
       title: Selection Translation Trigger Mode
       description: Choose how to trigger selection translation after selecting text on a webpage

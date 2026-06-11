@@ -11,3 +11,13 @@ describe("auto-pronunciation", () => {
     expect("autoPronunciation" in DEFAULT_CONFIG.selectionTranslation).toBe(true)
   })
 })
+
+describe("skipTargetLanguage", () => {
+  it("skipTargetLanguage defaults to true in config", () => {
+    expect(DEFAULT_CONFIG.selectionTranslation.skipTargetLanguage).toBe(true)
+  })
+
+  it("skipTargetLanguage field exists in selectionTranslation config", () => {
+    expect("skipTargetLanguage" in DEFAULT_CONFIG.selectionTranslation).toBe(true)
+  })
+})
