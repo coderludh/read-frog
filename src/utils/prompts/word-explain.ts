@@ -1,76 +1,103 @@
 import type { LangCodeISO6393, LangLevel } from "@read-frog/definitions"
-import { LANG_CODE_TO_EN_NAME, LANG_DICTIONARY_LABELS } from "@read-frog/definitions"
+import { LANG_CODE_TO_EN_NAME } from "@read-frog/definitions"
+
+/**
+ * Build prompts for dictionary-style word/phrase explanation in selection
+ * translation. Returns Markdown that the popover renders via MarkdownRenderer.
+ *
+ * The output contains three sections:
+ *   1. headword + pronunciation
+ *   2. the contextually correct meaning (based on the surrounding sentence,
+ *      web title, and summary)
+ *   3. other common senses grouped by part of speech, each with a short example
+ */
+export interface WordExplainPromptOptions {
+  /** Raw selected text (a single word or short phrase). */
+  input: string
+  /** Source language code; the language of the selected text. */
+  sourceLang: LangCodeISO6393
+  /** Target language code; the language the user reads in. */
+  targetLang: LangCodeISO6393
+  /** Learner level — controls how much explanation/example detail to include. */
+  langLevel: LangLevel
+  /** Optional page context that helps disambiguate the word. */
+  webTitle?: string
+  /** Optional web page summary for context. */
+  webSummary?: string
+  /** Optional surrounding sentence(s) where the word appears. */
+  webContent?: string
+}
+
+export interface WordExplainPromptResult {
+  systemPrompt: string
+  prompt: string
+}
+
+const LEVEL_GUIDANCE: Record<LangLevel, string> = {
+  beginner: "Use very simple wording. Keep each definition to one short clause. Examples should use the most common 1000 words.",
+  intermediate: "Use natural everyday wording. Definitions can be one full sentence. Examples can use moderately advanced vocabulary.",
+  advanced: "Use precise wording with nuance. Definitions can include register/collocation hints. Examples may reflect realistic native usage.",
+}
 
 export function getWordExplainPrompt(
-  sourceLang: LangCodeISO6393,
-  targetLang: LangCodeISO6393,
-  langLevel: LangLevel,
-) {
-  const sourceLangName = LANG_CODE_TO_EN_NAME[sourceLang]
-  const targetLangName = LANG_CODE_TO_EN_NAME[targetLang]
+  options: WordExplainPromptOptions,
+): WordExplainPromptResult {
+  const {
+    input,
+    sourceLang,
+    targetLang,
+    langLevel,
+    webTitle,
+    webSummary,
+    webContent,
+  } = options
 
-  // get dictionary labels
-  const sourceLangLabels = LANG_DICTIONARY_LABELS[sourceLang]
-  const targetLangLabels = LANG_DICTIONARY_LABELS[targetLang]
+  const sourceLangName = LANG_CODE_TO_EN_NAME[sourceLang] ?? sourceLang
+  const targetLangName = LANG_CODE_TO_EN_NAME[targetLang] ?? targetLang
+  const levelGuidance = LEVEL_GUIDANCE[langLevel] ?? LEVEL_GUIDANCE.intermediate
 
-  return `
-    # Identity
-    You are a professional ${sourceLangName} language teacher who provides clear and concise explanations for words and phrases. Your student speaks ${targetLangName}. Your student's language level is ${langLevel}.
+  const systemPrompt = `You are a professional ${sourceLangName} dictionary assistant for a learner whose native language is ${targetLangName}. The learner's level is ${langLevel}.
 
-    # User Input
-    You will receive two pieces of information: the query text and context. The context will help you understand the meaning of the query object more accurately.
+# Goal
+The user has selected a single word or short phrase while reading a web page. Explain it for the learner.
 
-    # Step
-    1. Analyze the selection and determine whether it is a word/phrase or a sentence;
-    2. If is word or phrase, use \`word - template\`;
-    3. If is sentence, use \`sentence - template\`.
+# Style
+${levelGuidance}
+Write all explanations in ${targetLangName}, except for the headword, pronunciation, and example sentences (which stay in ${sourceLangName} where natural).
 
-    # Output Rules:
-    - After selecting the template, strictly follow the template when producing the output.
-    - Do not add any text outside the structure.
-    - Do not add explanations, comments, or greetings.
-    - Absolutely do not output template name itself.
-    - Unless there are special requirements, must output in ${targetLangName}.
+# Output format (strict Markdown)
+Output ONLY the following sections, in this order, with NO extra commentary:
 
-    # Level Definitions
-    - beginner: CEFR level A1-A2.
-    - intermediate: CEFR level B1-B2.
-    - advanced: CEFR level C1-C2.
+### {{headword}}  /{{IPA or pinyin}}/
 
-    # Output Template
+**【此处含义】** {{the meaning that fits the surrounding context}} (give the part of speech)
+> {{the sentence from the page where it appears, or the input itself if no context}}
+> {{translation of that sentence in ${targetLangName}}}
 
-    word-template:
+**【其他常见义项】**
+- **{{part-of-speech}}**: {{sense 1}} — _{{short example in ${sourceLangName}}}_
+- **{{part-of-speech}}**: {{sense 2}} — _{{short example in ${sourceLangName}}}_
+- ...up to 4 senses total, ordered by frequency
 
-    # {{ the word }}
+# Rules
+- If the input is a phrase or idiom, treat it as one unit; do not gloss the words separately.
+- Skip the 【其他常见义项】 section entirely if the word genuinely has only one common meaning.
+- If you cannot determine the pronunciation, omit the \`/.../\` slashes (do not invent one).
+- Never output anything outside the format above. No greetings, no notes, no "Here is...".`
 
-    **{{% ${sourceLangLabels.pronunciation} %}}**
+  const contextLines: string[] = []
+  if (webTitle && webTitle.trim())
+    contextLines.push(`Web page title: ${webTitle.trim()}`)
+  if (webSummary && webSummary.trim())
+    contextLines.push(`Web page summary: ${webSummary.trim()}`)
+  if (webContent && webContent.trim())
+    contextLines.push(`Surrounding context: ${webContent.trim()}`)
 
-    {{ ${targetLangLabels.partOfSpeech} }}
+  const contextBlock = contextLines.length > 0
+    ? `\n\n## Context\n${contextLines.join("\n")}`
+    : ""
 
-    ## ${targetLangLabels.definition}
-    **{{ definition in ${sourceLangName} }}**
-    
-    {{ definition in ${targetLangName} }}
+  const prompt = `Selected word/phrase: ${input}${contextBlock}`
 
-    {{ sentence in ${sourceLangName} }}
-
-    ## ${targetLangLabels.root}
-    {{ about word root }}
-
-    ## ${targetLangLabels.extendedVocabulary}
-    - ${targetLangLabels.synonyms}: {{ the synonyms }}
-    - ${targetLangLabels.antonyms}: {{ the antonyms }}
-
-    ${targetLangLabels.uniqueAttributes}
-
-    sentence-template:
-
-    **{{ translation in ${targetLangName} }}**
-
-    ## ${targetLangLabels.grammarPoint}
-    {{ Explanation of grammar points }}
-
-    ## ${targetLangLabels.explanation}
-    {{ Explain its usage in the given context }}
-  `
+  return { systemPrompt, prompt }
 }

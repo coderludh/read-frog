@@ -18,6 +18,7 @@ import { popoverFixedPositionAtom } from "@/utils/atoms/popover-position"
 import { filterEnabledProvidersConfig } from "@/utils/config/helpers"
 import { buildFeatureProviderPatch } from "@/utils/constants/feature-providers"
 import { streamBackgroundText } from "@/utils/content-script/background-stream-client"
+import { isWordOrPhrase } from "@/utils/content/is-word-or-phrase"
 import { resolveLanguageCodeFromLocale } from "@/utils/content/page-language"
 import { prepareTranslationText } from "@/utils/host/translate/text-preparation"
 import { translateTextCore } from "@/utils/host/translate/translate-text"
@@ -25,6 +26,7 @@ import { getOrCreateWebPageContext } from "@/utils/host/translate/webpage-contex
 import { getOrGenerateWebPageSummary } from "@/utils/host/translate/webpage-summary"
 import { onMessage } from "@/utils/message"
 import { getTranslatePromptFromConfig } from "@/utils/prompts/translate"
+import { getWordExplainPrompt } from "@/utils/prompts/word-explain"
 import { resolveModelId } from "@/utils/providers/model-id"
 import { getProviderOptionsWithOverride } from "@/utils/providers/options"
 import { shadowWrapper } from "../.."
@@ -134,6 +136,72 @@ async function translateWithLlm({
   return translatedText
 }
 
+async function explainWordWithLlm({
+  preparedText,
+  providerConfig,
+  translateRequest,
+  onChunk,
+  registerAbortController,
+}: {
+  preparedText: string
+  providerConfig: LLMProviderConfig
+  translateRequest: SelectionToolbarTranslateRequestSlice
+  onChunk: (data: BackgroundTextStreamSnapshot) => void
+  registerAbortController: (abortController: AbortController) => void
+}) {
+  const {
+    id: providerId,
+    provider,
+    providerOptions: userProviderOptions,
+    temperature,
+  } = providerConfig
+  const modelName = resolveModelId(providerConfig.model)
+  const providerOptions = getProviderOptionsWithOverride(modelName ?? "", provider, userProviderOptions)
+  const abortController = new AbortController()
+  registerAbortController(abortController)
+
+  const throwIfAborted = () => {
+    if (abortController.signal.aborted) {
+      throw new DOMException("aborted", "AbortError")
+    }
+  }
+
+  const webPageContext = await getSelectionWebPagePromptContext(providerConfig, translateRequest.enableAIContentAware)
+  throwIfAborted()
+
+  // Source language may be "auto"; fall back to the page's declared language so
+  // the dictionary prompt still receives a concrete source code.
+  const sourceCode = translateRequest.language.sourceCode === "auto"
+    ? resolveLanguageCodeFromLocale(document.documentElement.lang) ?? translateRequest.language.targetCode
+    : translateRequest.language.sourceCode as LangCodeISO6393
+
+  const { systemPrompt, prompt } = getWordExplainPrompt({
+    input: preparedText,
+    sourceLang: sourceCode,
+    targetLang: translateRequest.language.targetCode,
+    langLevel: translateRequest.language.level,
+    webTitle: webPageContext?.webTitle,
+    webContent: webPageContext?.webContent,
+    webSummary: webPageContext?.webSummary,
+  })
+
+  const translatedText = await streamBackgroundText(
+    {
+      providerId,
+      system: systemPrompt,
+      prompt,
+      providerOptions,
+      temperature,
+    },
+    {
+      signal: abortController.signal,
+      onChunk,
+    },
+  )
+
+  return translatedText
+}
+
 async function translateWithStandardProvider({
   text,
   providerConfig,
@@ -190,6 +258,10 @@ export function SelectionTranslationProvider({
   const [thinking, setThinking] = useState<ThinkingSnapshot | null>(null)
   const [error, setError] = useState<SelectionToolbarInlineError | null>(null)
   const [isTranslating, setIsTranslating] = useState(false)
+  // "dictionary" when the selection is a single word/phrase and we ran the
+  // word-explain prompt; "translate" for ordinary translation. Drives whether
+  // TranslationContent renders Markdown or plain text.
+  const [translationMode, setTranslationMode] = useState<"translate" | "dictionary">("translate")
   const [rerunNonce, setRerunNonce] = useState(0)
   const [sourceSurface, setSourceSurface] = useState<
     typeof ANALYTICS_SURFACE.SELECTION_TOOLBAR | typeof ANALYTICS_SURFACE.CONTEXT_MENU
@@ -289,6 +361,7 @@ export function SelectionTranslationProvider({
     setTranslatedText(undefined)
     setThinking(null)
     setError(null)
+    setTranslationMode("translate")
   }, [])
 
   const cancelCurrentTranslation = useCallback((runId?: number) => {
@@ -373,7 +446,16 @@ export function SelectionTranslationProvider({
           text: "",
         })
 
-        const nextSnapshot = await translateWithLlm({
+        // Switch to dictionary mode for single words / short phrases. Sentences
+        // and longer selections still go through plain translation.
+        const useDictionaryMode = isWordOrPhrase(preparedText)
+        if (runIdRef.current === runId) {
+          setTranslationMode(useDictionaryMode ? "dictionary" : "translate")
+        }
+
+        const runLlm = useDictionaryMode ? explainWordWithLlm : translateWithLlm
+
+        const nextSnapshot = await runLlm({
           preparedText,
           providerConfig,
           translateRequest,
@@ -395,6 +477,9 @@ export function SelectionTranslationProvider({
       }
       else {
         setThinking(null)
+        if (runIdRef.current === runId) {
+          setTranslationMode("translate")
+        }
         nextTranslatedText = await translateWithStandardProvider({
           text: preparedText,
           providerConfig,
@@ -667,6 +752,7 @@ export function SelectionTranslationProvider({
               translatedText={translatedText}
               isTranslating={isTranslating}
               thinking={thinking}
+              mode={translationMode}
             />
             <SelectionToolbarErrorAlert error={error} className="-mt-3" />
           </SelectionPopover.Body>
